@@ -1,0 +1,41 @@
+#!/bin/bash
+if [ ${#} -ne 2 ] ; then 
+	echo '2 vars!' 1>&2
+	exit 1
+fi
+workdir=`dirname ${1}`
+while read test ; do 
+	if [ ! -r "${workdir}/${test}.in" ] ; then
+		echo "First arg illegal" 1>&2
+		exit 1
+	fi
+	if [ ! -r "${workdir}/${test}.out" ] ; then
+		echo "Second arg illegal" 1>&2
+		exit 1
+	fi
+done < "$1"
+
+while read test ; do 
+	temprecord=`mktemp /tmp/tfile.XXXXXXXXXX`
+	if [ -r "${workdir}/${test}.args" ] ; then
+		read arguments < "${workdir}/${test}.args"
+		read pars < ${workdir}/${test}.in
+		#echo ${arguments}
+                #echo $2 "${arguments} ${pars}"
+		#"$2 ${arguments} <${workdir}/${test}.in 1>${temprecord} 2> /dev/null"
+		$2 ${arguments} <${workdir}/${test}.in 1>${temprecord} 2> /dev/null
+	else
+		$2 < ${workdir}/${test}.in > $temprecord
+	fi
+	diff ${temprecord} ${workdir}/${test}.out > /dev/null
+	if [ ${?} != 0 ] ; then
+   	echo "Test failed: ${test}"
+	echo "Input:"
+	cat ${test}.in
+	echo "Expected:"
+	cat ${test}.out
+	echo "Actual:"
+	cat $temprecord
+	fi
+	rm $temprecord
+done < "$1"
